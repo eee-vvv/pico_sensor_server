@@ -96,3 +96,19 @@ def index():
 
     history_f = []
     for r in history:
+        d = dict(r)
+        d['temperature'] = c_to_f(d['temperature'])
+        d['timestamp'] = to_eastern(d['timestamp'])
+        history_f.append(d)
+
+    pipeline_data = analyze()
+
+    return render_template('index.html',
+                           latest=latest,
+                           history=history_f,
+                           pipeline=pipeline_data)
+
+
+if __name__ == '__main__':
+    init_db()
+    app.run(host='0.0.0.0', port=5000, debug=True)
