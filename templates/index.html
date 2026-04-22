@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Temperature Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: sans-serif; background: #f5f5f5; color: #333; padding: 2rem; }
+        h1 { margin-bottom: 1.5rem; font-size: 1.5rem; }
+        .cards { display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
+        .card {
+            background: white; border-radius: 8px; padding: 1.5rem;
+            flex: 1; min-width: 200px; box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        }
+        .card h2 { font-size: 1rem; text-transform: uppercase; color: #888; margin-bottom: 0.5rem; }
+        .card .temp { font-size: 2.5rem; font-weight: bold; }
+        .card .humidity { font-size: 1rem; color: #555; margin-top: 0.25rem; }
+        .card .timestamp { font-size: 0.75rem; color: #aaa; margin-top: 0.5rem; }
+        .differential {
+            background: white; border-radius: 8px; padding: 1.5rem;
+            margin-bottom: 2rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        }
+        .differential h2 { font-size: 1rem; text-transform: uppercase; color: #888; margin-bottom: 0.5rem; }
+        .differential .value { font-size: 2rem; font-weight: bold; }
+        .chart-container {
+            background: white; border-radius: 8px; padding: 1.5rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        }
+        .chart-container h2 { font-size: 1rem; text-transform: uppercase; color: #888; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+    <h1>🌡️ Home Temperature Monitor</h1>
+
+    <div class="cards">
+        {% for location in ['upstairs', 'downstairs'] %}
+        {% if location in latest %}
+        <div class="card">
+            <h2>{{ location }}</h2>
+            <div class="temp">{{ "%.1f"|format(latest[location].temperature) }}°C</div>
+            <div class="humidity">💧 {{ "%.1f"|format(latest[location].humidity) }}%</div>
+            <div class="timestamp">{{ latest[location].timestamp }}</div>
+        </div>
+        {% else %}
+        <div class="card">
+            <h2>{{ location }}</h2>
+            <div class="temp">--</div>
+            <div class="humidity">No data yet</div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+
+    {% if 'upstairs' in latest and 'downstairs' in latest %}
+    <div class="differential">
+        <h2>Temperature Differential</h2>
+        <div class="value">
+            {{ "%.1f"|format((latest['upstairs'].temperature - latest['downstairs'].temperature)|abs) }}°C
+            {% if latest['upstairs'].temperature > latest['downstairs'].temperature %}
+            (upstairs warmer)
+            {% else %}
+            (downstairs warmer)
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="chart-container">
+        <h2>Temperature History</h2>
+        <canvas id="tempChart"></canvas>
+    </div>
+
+    <script>
+        const history = {{ history | tojson }};
+
+        const upstairs = history.filter(r => r.sensor_id === 'upstairs').reverse();
+        const downstairs = history.filter(r => r.sensor_id === 'downstairs').reverse();
+
+        const labels = [...new Set(history.map(r => r.timestamp))].sort();
+
+        new Chart(document.getElementById('tempChart'), {
+            type: 'line',
+            data: {
+                datasets: [
+                    {
+                        label: 'Upstairs (°C)',
+                        data: upstairs.map(r => ({ x: r.timestamp, y: r.temperature })),
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231,76,60,0.1)',
+                        tension: 0.3,
+                        fill: true,
+                    },
+                    {
+                        label: 'Downstairs (°C)',
+                        data: downstairs.map(r => ({ x: r.timestamp, y: r.temperature })),
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52,152,219,0.1)',
+                        tension: 0.3,
+                        fill: true,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        type: 'category',
+                        ticks: { maxTicksLimit: 10, maxRotation: 45 }
+                    },
+                    y: {
+                        title: { display: true, text: 'Temperature (°C)' }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
