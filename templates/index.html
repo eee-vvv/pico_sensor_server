@@ -5,31 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home Temperature Monitor</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: sans-serif; background: #f5f5f5; color: #333; padding: 2rem; }
-        h1 { margin-bottom: 1.5rem; font-size: 1.5rem; }
-        h2 { font-size: 0.85rem; text-transform: uppercase; color: #888; margin-bottom: 0.5rem; letter-spacing: 0.05em; }
-        .cards { display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
-        .card {
-            background: white; border-radius: 8px; padding: 1.5rem;
-            flex: 1; min-width: 200px; box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-        }
-        .card .temp { font-size: 2.5rem; font-weight: bold; }
-        .card .humidity { font-size: 1rem; color: #555; margin-top: 0.25rem; }
-        .card .timestamp { font-size: 0.75rem; color: #aaa; margin-top: 0.5rem; }
-        .panel {
-            background: white; border-radius: 8px; padding: 1.5rem;
-            margin-bottom: 2rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-        }
-        .panel .value { font-size: 1.75rem; font-weight: bold; margin-bottom: 0.25rem; }
-        .panel .detail { font-size: 0.95rem; color: #555; }
-        .alert { color: #c0392b; font-weight: bold; margin-top: 0.75rem; font-size: 0.95rem; }
-        .chart-container {
-            background: white; border-radius: 8px; padding: 1.5rem;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-        }
-    </style>
+    <link rel="stylesheet" type="text/css"
+        href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <h1>Home Temperature Monitor</h1>
@@ -101,47 +78,6 @@
         <canvas id="tempChart"></canvas>
     </div>
 
-    <script>
-        const history = {{ history | tojson }};
-
-        const upstairs = history.filter(r => r.sensor_id === 'upstairs').reverse();
-        const downstairs = history.filter(r => r.sensor_id === 'downstairs').reverse();
-
-        new Chart(document.getElementById('tempChart'), {
-            type: 'line',
-            data: {
-                datasets: [
-                    {
-                        label: 'Upstairs (°F)',
-                        data: upstairs.map(r => ({ x: r.timestamp, y: r.temperature })),
-                        borderColor: '#c0392b',
-                        backgroundColor: 'rgba(192,57,43,0.08)',
-                        tension: 0.3,
-                        fill: true,
-                    },
-                    {
-                        label: 'Downstairs (°F)',
-                        data: downstairs.map(r => ({ x: r.timestamp, y: r.temperature })),
-                        borderColor: '#2980b9',
-                        backgroundColor: 'rgba(41,128,185,0.08)',
-                        tension: 0.3,
-                        fill: true,
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    x: {
-                        type: 'category',
-                        ticks: { maxTicksLimit: 10, maxRotation: 45 }
-                    },
-                    y: {
-                        title: { display: true, text: 'Temperature (°F)' }
-                    }
-                }
-            }
-        });
-    </script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

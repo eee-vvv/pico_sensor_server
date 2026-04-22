@@ -3,15 +3,15 @@ from datetime import datetime
 
 DATABASE = 'readings.db'
 
-# Differential threshold in °F
+# Differential threshold in degrees F
 HEAT_DIFFERENTIAL = 5.0
 
 # Smoothing window
 SMOOTH_WINDOW = 3
 
-# Alert range in °F
-TEMP_MIN = 65.0
-TEMP_MAX = 85.0
+# Alert range in degrees F
+TEMP_MIN = 67.0
+TEMP_MAX = 76.0
 
 
 def celsius_to_fahrenheit(c):
@@ -31,7 +31,7 @@ def get_recent_readings(sensor_id, limit=10):
 
 
 def smooth(readings):
-    """Rolling average over last SMOOTH_WINDOW readings, returned in °F."""
+    """Rolling average over last SMOOTH_WINDOW readings, returned in degrees F."""
     if not readings:
         return None
     window = readings[:SMOOTH_WINDOW]
@@ -40,7 +40,7 @@ def smooth(readings):
 
 
 def rate_of_change(readings):
-    """°F per minute between oldest and newest reading in window."""
+    """degree F per minute between oldest and newest reading in window."""
     if len(readings) < 2:
         return None
 
@@ -64,7 +64,7 @@ def rate_of_change(readings):
 def infer_hvac_state(upstairs_smooth, downstairs_smooth):
     """
     Infer HVAC state from floor differential.
-    If upstairs is more than HEAT_DIFFERENTIAL°F warmer -> heat is on.
+    If upstairs is more than HEAT_DIFFERENTIAL degrees F warmer -> heat is on.
     """
     if upstairs_smooth is None or downstairs_smooth is None:
         return 'unknown'
