@@ -1,9 +1,11 @@
 import sqlite3
 from datetime import datetime
 from flask import Flask, g, jsonify, render_template, request
+from pipeline import analyze
 
 app = Flask(__name__)
 DATABASE = 'readings.db'
+
 
 def get_db():
     if 'db' not in g:
@@ -11,11 +13,13 @@ def get_db():
         g.db.row_factory = sqlite3.Row
     return g.db
 
+
 @app.teardown_appcontext
 def close_db(e=None):
     db = g.pop('db', None)
     if db is not None:
         db.close()
+
 
 def init_db():
     db = sqlite3.connect(DATABASE)
@@ -30,6 +34,11 @@ def init_db():
     ''')
     db.commit()
     db.close()
+
+
+def c_to_f(c):
+    return c * 9.0 / 5.0 + 32.0
+
 
 @app.route('/reading', methods=['POST'])
 def reading():
@@ -47,6 +56,12 @@ def reading():
     print(f"[{datetime.now()}] {data}")
     return jsonify({'status': 'ok'}), 200
 
+
+@app.route('/pipeline')
+def pipeline():
+    return jsonify(analyze())
+
+
 @app.route('/')
 def index():
     db = get_db()
@@ -57,14 +72,28 @@ def index():
         'FROM readings r1 WHERE timestamp = '
         '(SELECT MAX(timestamp) FROM readings r2 WHERE r2.sensor_id = r1.sensor_id)'
     ):
-        latest[row['sensor_id']] = dict(row)
+        d = dict(row)
+        d['temperature'] = c_to_f(d['temperature'])
+        latest[row['sensor_id']] = d
 
     history = db.execute(
         'SELECT sensor_id, temperature, humidity, timestamp '
         'FROM readings ORDER BY timestamp DESC LIMIT 100'
     ).fetchall()
 
-    return render_template('index.html', latest=latest, history=[dict(r) for r in history])
+    history_f = []
+    for r in history:
+        d = dict(r)
+        d['temperature'] = c_to_f(d['temperature'])
+        history_f.append(d)
+
+    pipeline_data = analyze()
+
+    return render_template('index.html',
+                           latest=latest,
+                           history=history_f,
+                           pipeline=pipeline_data)
+
 
 if __name__ == '__main__':
     init_db()
