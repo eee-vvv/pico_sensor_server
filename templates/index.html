@@ -9,63 +9,92 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: sans-serif; background: #f5f5f5; color: #333; padding: 2rem; }
         h1 { margin-bottom: 1.5rem; font-size: 1.5rem; }
+        h2 { font-size: 0.85rem; text-transform: uppercase; color: #888; margin-bottom: 0.5rem; letter-spacing: 0.05em; }
         .cards { display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
         .card {
             background: white; border-radius: 8px; padding: 1.5rem;
             flex: 1; min-width: 200px; box-shadow: 0 1px 4px rgba(0,0,0,0.1);
         }
-        .card h2 { font-size: 1rem; text-transform: uppercase; color: #888; margin-bottom: 0.5rem; }
         .card .temp { font-size: 2.5rem; font-weight: bold; }
         .card .humidity { font-size: 1rem; color: #555; margin-top: 0.25rem; }
         .card .timestamp { font-size: 0.75rem; color: #aaa; margin-top: 0.5rem; }
-        .differential {
+        .panel {
             background: white; border-radius: 8px; padding: 1.5rem;
             margin-bottom: 2rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1);
         }
-        .differential h2 { font-size: 1rem; text-transform: uppercase; color: #888; margin-bottom: 0.5rem; }
-        .differential .value { font-size: 2rem; font-weight: bold; }
+        .panel .value { font-size: 1.75rem; font-weight: bold; margin-bottom: 0.25rem; }
+        .panel .detail { font-size: 0.95rem; color: #555; }
+        .alert { color: #c0392b; font-weight: bold; margin-top: 0.75rem; font-size: 0.95rem; }
         .chart-container {
             background: white; border-radius: 8px; padding: 1.5rem;
             box-shadow: 0 1px 4px rgba(0,0,0,0.1);
         }
-        .chart-container h2 { font-size: 1rem; text-transform: uppercase; color: #888; margin-bottom: 1rem; }
     </style>
 </head>
 <body>
-    <h1>🌡️ Home Temperature Monitor</h1>
+    <h1>Home Temperature Monitor</h1>
 
     <div class="cards">
         {% for location in ['upstairs', 'downstairs'] %}
-        {% if location in latest %}
         <div class="card">
             <h2>{{ location }}</h2>
-            <div class="temp">{{ "%.1f"|format(latest[location].temperature) }}°C</div>
-            <div class="humidity">💧 {{ "%.1f"|format(latest[location].humidity) }}%</div>
+            {% if location in latest %}
+            <div class="temp">{{ "%.1f"|format(latest[location].temperature) }}°F</div>
+            <div class="humidity">Humidity: {{ "%.1f"|format(latest[location].humidity) }}%</div>
             <div class="timestamp">{{ latest[location].timestamp }}</div>
-        </div>
-        {% else %}
-        <div class="card">
-            <h2>{{ location }}</h2>
+            {% else %}
             <div class="temp">--</div>
             <div class="humidity">No data yet</div>
+            {% endif %}
         </div>
-        {% endif %}
         {% endfor %}
     </div>
 
     {% if 'upstairs' in latest and 'downstairs' in latest %}
-    <div class="differential">
+    <div class="panel">
         <h2>Temperature Differential</h2>
         <div class="value">
-            {{ "%.1f"|format((latest['upstairs'].temperature - latest['downstairs'].temperature)|abs) }}°C
+            {{ "%.1f"|format((latest['upstairs'].temperature - latest['downstairs'].temperature)|abs) }}°F
+        </div>
+        <div class="detail">
             {% if latest['upstairs'].temperature > latest['downstairs'].temperature %}
-            (upstairs warmer)
+            Upstairs is warmer
             {% else %}
-            (downstairs warmer)
+            Downstairs is warmer
             {% endif %}
         </div>
     </div>
     {% endif %}
+
+    <div class="panel">
+        <h2>HVAC Status</h2>
+        <div class="value">
+            {% if pipeline.hvac_state == 'heating' %}
+            Heat is ON
+            {% elif pipeline.hvac_state == 'idle' %}
+            Idle
+            {% else %}
+            Not enough data
+            {% endif %}
+        </div>
+        {% if pipeline.differential %}
+        <div class="detail">
+            Differential: {{ "%.1f"|format(pipeline.differential) }}°F
+            (upstairs {{ "%.1f"|format(pipeline.upstairs.smoothed_temp) }}°F
+            vs downstairs {{ "%.1f"|format(pipeline.downstairs.smoothed_temp) }}°F)
+        </div>
+        {% endif %}
+        {% if pipeline.upstairs.rate_of_change %}
+        <div class="detail">
+            Upstairs rate of change: {{ "%.3f"|format(pipeline.upstairs.rate_of_change) }}°F/min
+        </div>
+        {% endif %}
+        {% if pipeline.alerts %}
+        {% for alert in pipeline.alerts %}
+        <div class="alert">Warning: {{ alert }}</div>
+        {% endfor %}
+        {% endif %}
+    </div>
 
     <div class="chart-container">
         <h2>Temperature History</h2>
@@ -78,25 +107,23 @@
         const upstairs = history.filter(r => r.sensor_id === 'upstairs').reverse();
         const downstairs = history.filter(r => r.sensor_id === 'downstairs').reverse();
 
-        const labels = [...new Set(history.map(r => r.timestamp))].sort();
-
         new Chart(document.getElementById('tempChart'), {
             type: 'line',
             data: {
                 datasets: [
                     {
-                        label: 'Upstairs (°C)',
+                        label: 'Upstairs (°F)',
                         data: upstairs.map(r => ({ x: r.timestamp, y: r.temperature })),
-                        borderColor: '#e74c3c',
-                        backgroundColor: 'rgba(231,76,60,0.1)',
+                        borderColor: '#c0392b',
+                        backgroundColor: 'rgba(192,57,43,0.08)',
                         tension: 0.3,
                         fill: true,
                     },
                     {
-                        label: 'Downstairs (°C)',
+                        label: 'Downstairs (°F)',
                         data: downstairs.map(r => ({ x: r.timestamp, y: r.temperature })),
-                        borderColor: '#3498db',
-                        backgroundColor: 'rgba(52,152,219,0.1)',
+                        borderColor: '#2980b9',
+                        backgroundColor: 'rgba(41,128,185,0.08)',
                         tension: 0.3,
                         fill: true,
                     }
@@ -110,7 +137,7 @@
                         ticks: { maxTicksLimit: 10, maxRotation: 45 }
                     },
                     y: {
-                        title: { display: true, text: 'Temperature (°C)' }
+                        title: { display: true, text: 'Temperature (°F)' }
                     }
                 }
             }
