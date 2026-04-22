@@ -1,10 +1,22 @@
 import sqlite3
 from datetime import datetime
+import pytz
 from flask import Flask, g, jsonify, render_template, request
 from pipeline import analyze
 
 app = Flask(__name__)
 DATABASE = 'readings.db'
+
+eastern = pytz.timezone('America/New_York')
+
+
+def to_eastern(ts_str):
+    try:
+        dt = datetime.fromisoformat(ts_str)
+        dt = pytz.utc.localize(dt)
+        return dt.astimezone(eastern).strftime('%Y-%m-%d %I:%M:%S %p')
+    except:
+        return ts_str
 
 
 def get_db():
@@ -74,6 +86,7 @@ def index():
     ):
         d = dict(row)
         d['temperature'] = c_to_f(d['temperature'])
+        d['timestamp'] = to_eastern(d['timestamp'])
         latest[row['sensor_id']] = d
 
     history = db.execute(
@@ -83,18 +96,3 @@ def index():
 
     history_f = []
     for r in history:
-        d = dict(r)
-        d['temperature'] = c_to_f(d['temperature'])
-        history_f.append(d)
-
-    pipeline_data = analyze()
-
-    return render_template('index.html',
-                           latest=latest,
-                           history=history_f,
-                           pipeline=pipeline_data)
-
-
-if __name__ == '__main__':
-    init_db()
-    app.run(host='0.0.0.0', port=5000, debug=True)
