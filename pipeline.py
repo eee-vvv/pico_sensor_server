@@ -31,7 +31,7 @@ def get_recent_readings(sensor_id, limit=10):
 
 
 def smooth(readings):
-    """Rolling average over last SMOOTH_WINDOW readings, returned in degrees F."""
+    """rolling average over last SMOOTH_WINDOW readings, returned in degrees F."""
     if not readings:
         return None
     window = readings[:SMOOTH_WINDOW]
@@ -63,8 +63,8 @@ def rate_of_change(readings):
 
 def infer_hvac_state(upstairs_smooth, downstairs_smooth):
     """
-    Infer HVAC state from floor differential.
-    If upstairs is more than HEAT_DIFFERENTIAL degrees F warmer -> heat is on.
+    infer HVAC state from floor differential.
+    if upstairs is more than HEAT_DIFFERENTIAL degrees F warmer -> heat is on.
     """
     if upstairs_smooth is None or downstairs_smooth is None:
         return 'unknown'
@@ -75,7 +75,7 @@ def infer_hvac_state(upstairs_smooth, downstairs_smooth):
 
 
 def check_alert(smoothed_temp, sensor_id):
-    """Alert if temp is out of comfortable range."""
+    """alert if temp is out of comfortable range."""
     if smoothed_temp is None:
         return None
     if smoothed_temp < TEMP_MIN:
@@ -87,7 +87,7 @@ def check_alert(smoothed_temp, sensor_id):
 
 def analyze():
     """
-    Full pipeline:
+    full pipeline:
       raw readings -> smooth -> differential -> HVAC inference -> alerts
     """
     up_readings = get_recent_readings('upstairs')
